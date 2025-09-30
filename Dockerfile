@@ -1,4 +1,4 @@
-FROM artifactory.momenta.works/docker-momenta/python:3.10
+FROM artifactory.momenta.works/docker-momenta/python:3.7
 # 设置工作目录，后续的命令都会在这个目录下执行
 WORKDIR /app
 
