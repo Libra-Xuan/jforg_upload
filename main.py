@@ -172,22 +172,59 @@ def start_upload_process(request: UploadRequest):
 
     print(f"\n➡️  步骤 2: 正在构建上传任务...")
     upload_tasks = build_upload_tasks(api_data, request.products)
-    # print(upload_tasks)
-    # print(f"\n➡️  步骤 3: 开始执行上传...")
-    # final_results = execute_upload_tasks(upload_tasks)
+    print(upload_tasks)
+    print(f"\n➡️  步骤 3: 开始执行上传...")
+    # final_results 是一个包含每个文件上传结果的详细列表
+    final_results = execute_upload_tasks(upload_tasks)
     
-    # all_final_results = []
-    # processed_products = {res['product'] for res in final_results}
+    # --- 新的、更简洁的结果聚合逻辑 ---
     
-    # all_final_results.extend(final_results)
+    # 最终要返回给前端的结果列表
+    aggregated_results_list = []
     
-    # for product in request.products:
-    #     if product not in processed_products:
-    #         all_final_results.append({
-    #             "product": product,
-    #             "status": "error",
-    #             "message": "未能构建上传任务，请检查后端日志和配置。"
-    #         })
+    # 遍历前端请求的每一个产品，为它们生成一个最终状态
+    for product_key in request.products:
+        
+        # 筛选出属于当前产品的所有任务结果
+        results_for_this_product = [res for res in final_results if res['product'] == product_key]
+        
+        # 最终的聚合结果
+        product_summary = {
+            "product": product_key,
+            "status": "error", # 默认是 error
+            "message": ""
+        }
 
-    # print("\n✅ --- 所有任务处理完成。---")
-    # return all_final_results
+        # 判断情况 1: 这个产品连有效的上传任务都没有构建出来
+        if not results_for_this_product:
+            product_summary['message'] = "未能构建上传任务，请检查后端日志和配置。"
+            aggregated_results_list.append(product_summary)
+            continue # 处理下一个产品
+
+        # 判断情况 2: 至少有一个文件上传失败
+      
+        has_errors = any(res['status'] == 'error' for res in results_for_this_product)
+        if has_errors:
+            # 统计成功和失败的数量，用于生成更详细的消息
+            success_count = sum(1 for res in results_for_this_product if res['status'] == 'success')
+            error_count = len(results_for_this_product) - success_count
+            
+            product_summary['status'] = 'error'
+            product_summary['message'] = f"部分文件上传失败 (成功: {success_count}, 失败: {error_count})"
+            aggregated_results_list.append(product_summary)
+            continue # 处理下一个产品
+            
+        # 判断情况 3: 所有文件都上传成功
+        # 如果代码能执行到这里，说明上面两个 if 都没触发，即所有文件都成功了
+        product_summary['status'] = 'success'
+        product_summary['message'] = f"全部上传成功 ({len(results_for_this_product)}个文件)"
+        aggregated_results_list.append(product_summary)
+
+    # 打印最终的摘要日志
+    print("\n📊 --- 最终产品聚合结果摘要 ---")
+    for result in aggregated_results_list:
+        icon = "✅" if result['status'] == 'success' else "❌"
+        print(f"   {icon} {result['product']}: {result['message']}")
+
+    print("\n✅ --- 所有任务处理完成。---")
+    return aggregated_results_list
