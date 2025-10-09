@@ -18,8 +18,8 @@ HEADERS = {
 
 # 定义每个产品最终的上传目标文件夹路径
 PRODUCT_FAMILY_BASE_PATHS: Dict[str, str] = {
-    "ST3": "panguprodmmt/Momenta/167/NCD2442/",
-    "ST35": "panguprodmmt/Momenta/174/NCD2442/",
+    "ST3": "panguprodmmt/Momenta/167/NCD2442/test/",
+    "ST35": "panguprodmmt/Momenta/174/NCD2442/test/",
 }
 
 
@@ -44,13 +44,10 @@ FIXED_JSON_PATHS = {
 
 def execute_upload_tasks(tasks: List[Dict[str, str]]) -> List[Dict[str, Any]]:
     """
-    执行一个上传任务列表，并返回每个任务的结果。
-
-    Args:
-        tasks: 一个任务字典的列表，每个字典必须包含 'product_key', 'obs_path', 'target_path'。
-
-    Returns:
-        一个包含每个任务简洁上传结果的列表。
+    执行一个上传任务列表，并返回每个任务的详细结果。
+    
+    返回的每个结果字典都包含 status, obs_path, 和 target_path，
+    以便上层调用者可以构建完整的最终路径。
     """
     upload_results = []
 
@@ -65,33 +62,39 @@ def execute_upload_tasks(tasks: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         
         print(f"     - 正在上传 '{product_key}':")
         print(f"       - 源: {obs_path}")
-        print(f"       - 目标: {target_path}")
+        print(f"       - 目标文件夹: {target_path}")
 
         payload = {"obs_path": obs_path, "target_path": target_path}
-        result_detail = {}
         
         try:
-            # 设置较长的超时时间，以防大文件上传耗时
             response = requests.post(API_URL, headers=HEADERS, data=json.dumps(payload), timeout=300)
             
+            # --- 核心修改：返回更清晰、更有用的字段 ---
             if response.status_code == 200:
                 result_detail = {
                     "product": product_key,
                     "status": "success",
-                    "message": "上传成功"
+                    "message": "上传成功",
+                    "obs_path": obs_path,       # 明确返回源路径
+                    "target_path": target_path  # 明确返回目标文件夹路径
                 }
             else:
                 result_detail = {
                     "product": product_key,
                     "status": "error",
-                    "message": f"上传失败 (状态码: {response.status_code})"
+                    # 返回更详细的错误信息
+                    "message": f"上传失败 (状态码: {response.status_code}, 详情: {response.text})",
+                    "obs_path": obs_path,
+                    "target_path": target_path
                 }
                 
         except Exception as e:
             result_detail = {
                 "product": product_key,
                 "status": "error",
-                "message": f"网络请求异常: {str(e)}"
+                "message": f"网络请求异常: {str(e)}",
+                "obs_path": obs_path,
+                "target_path": target_path
             }
         
         print(f"       - 结果: {result_detail['status']} - {result_detail['message']}")
