@@ -1,4 +1,3 @@
-# main.py (Python 3.7 兼容版)
 
 import os
 import re
@@ -6,7 +5,7 @@ import requests
 import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional # 1. 导入 Optional
+from typing import List, Dict, Any, Optional 
 
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -27,8 +26,7 @@ class UploadRequest(BaseModel):
     pipeline_url: str
     products: List[str]
 
-# --- 辅助函数 ---
-# 2. 修改类型提示
+
 def extract_task_id_from_url(url: str) -> Optional[str]:
     match = re.search(r"/tasks/([a-f0-9]+)", url)
     return match.group(1) if match else None
@@ -81,9 +79,7 @@ def extract_paths_from_action(proc_act_name: str, action: Dict, result_dict: Dic
 
 
 def build_upload_tasks(api_data: Dict[str, Any], requested_products: List[str]) -> List[Dict[str, str]]:
-    """
-    从 API 响应中根据清晰的规则，解析并构建上传任务列表 (V3 - 健壮版)。
-    """
+
     tasks = []
     action_list = api_data.get("data", {}).get("action_task_list", [])
     
@@ -142,7 +138,7 @@ def build_upload_tasks(api_data: Dict[str, Any], requested_products: List[str]) 
 @app.post("/api/start-upload")
 def start_upload_process(request: UploadRequest):
     print("\n" + "="*50)
-    print("✅ --- 收到 POST 请求 ---") # 2. 修改了日志，确认 POST 请求已进入
+    print("✅ --- 收到 POST 请求 ---") 
 
     api_data = {}
     dynamic_products_requested = any(p not in FIXED_JSON_PATHS for p in request.products)
@@ -160,7 +156,7 @@ def start_upload_process(request: UploadRequest):
         
         print("➡️  步骤 1: 正在调用 EP API...")
         try:
-            response = requests.get(api_url, headers=headers, timeout=15) # 3. 增加了超时设置
+            response = requests.get(api_url, headers=headers, timeout=15) 
             response.raise_for_status()
             api_data = response.json()
             print("   - ✅ EP API 调用成功。")
@@ -176,12 +172,26 @@ def start_upload_process(request: UploadRequest):
     print(f"\n➡️  步骤 3: 开始执行上传...")
     # final_results 是一个包含每个文件上传结果的详细列表
     final_results = execute_upload_tasks(upload_tasks)
-    
-    # --- 新的、更简洁的结果聚合逻辑 ---
-    
+       
     # 最终要返回给前端的结果列表
     aggregated_results_list = []
-    
+    # aggregated_results_list =[
+    # {
+    #     "product": "ST3_DEV",
+    #     "status": "success",
+    #     "message": "全部上传成功 (2个文件)"
+    # },
+    # {
+    #     "product": "ST3_PROD",
+    #     "status": "error",
+    #     "message": "部分文件上传失败 (成功: 1, 失败: 1)"
+    # },
+    # {
+    #     "product": "ST35_DEV",
+    #     "status": "success",
+    #     "message": "全部上传成功 (1个文件)"
+    # }
+    # ]
     # 遍历前端请求的每一个产品，为它们生成一个最终状态
     for product_key in request.products:
         
