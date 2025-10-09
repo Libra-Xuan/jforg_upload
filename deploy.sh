@@ -36,7 +36,7 @@ echo -e "\n${GREEN}Step 3: Running the new container in PRODUCTION mode...${NC}"
 # 3. 端口映射保持不变
 docker run -d \
     --restart always \
-    -p 8000:8000 \
+    -p 8443:8443 \
     --name ${CONTAINER_NAME} \
     --env-file .env \
     ${IMAGE_NAME}:${TAG}

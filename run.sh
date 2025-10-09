@@ -32,7 +32,7 @@ echo -e "${YELLOW}All logs will be printed here in real-time. Press CTRL+C to st
 # 2. 增加了 --rm 参数，这样当容器停止时（比如你按 CTRL+C），它会被自动删除，保持环境干净
 # 3. 容器名改为 ${CONTAINER_NAME}
 docker run --rm \
-    -p 8000:8000 \
+    -p 8443:8443 \
     --name ${CONTAINER_NAME} \
     --env-file .env \
     ${IMAGE_NAME}:${TAG}
