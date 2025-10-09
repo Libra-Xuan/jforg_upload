@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 # 从 upload_script 导入所有配置和执行函数
-from upload_script import TARGET_PATH_TEMPLATES, PRODUCT_TO_ACTION_NAME_MAP, execute_upload_tasks, FIXED_JSON_PATHS
+from upload_script import PRODUCT_FAMILY_BASE_PATHS, PRODUCT_TO_ACTION_NAME_MAP, execute_upload_tasks, FIXED_JSON_PATHS
 
 # --- 初始化和配置 ---
 load_dotenv()
@@ -24,6 +24,7 @@ EP_API_TOKEN = os.getenv("EP_API_TOKEN")
 # --- API 模型 ---
 class UploadRequest(BaseModel):
     pipeline_url: str
+    date_version: str  
     products: List[str]
 
 
@@ -31,10 +32,43 @@ def extract_task_id_from_url(url: str) -> Optional[str]:
     match = re.search(r"/tasks/([a-f0-9]+)", url)
     return match.group(1) if match else None
 
+def generate_dynamic_target_path(product_key: str, date_version: str) -> Optional[str]:
+    """根据产品名和日期版本，动态生成上传的目标路径"""
+    family = None
+    if product_key.startswith("ST3"):
+        family = "ST3"
+    elif product_key.startswith("ST35"):
+        family = "ST35"
+    
+    if not family:
+        print(f"   - ❌ 无法为 '{product_key}' 确定产品家族 (ST3/ST35)。")
+        return None
+
+    base_path = PRODUCT_FAMILY_BASE_PATHS.get(family)
+    if not base_path:
+        print(f"   - ❌ 未在 PRODUCT_FAMILY_BASE_PATHS 中找到 '{family}' 的基础路径。")
+        return None
+
+    env_part = None
+    if "DEV" in product_key:
+        env_part = "dev/"
+    elif "PROD" in product_key:
+        env_part = "prod/"
+    
+    if not env_part:
+        print(f"   - ❌ 无法为 '{product_key}' 确定环境 (DEV/PROD)。")
+        return None
+        
+    # 清理用户输入，并确保路径以斜杠结尾
+    clean_date_version = date_version.strip('/')
+    
+    final_path = f"{base_path}{env_part}{clean_date_version}/"
+    print(f"   - ✨ 为 '{product_key}' 生成动态路径: {final_path}")
+    return final_path
+
 def extract_paths_from_action(proc_act_name: str, action: Dict, result_dict: Dict, product_key: str) -> List[str]:
     """
     根据 action 名称和类型，从 result 字典中提取路径。
-    (Python 3.7 兼容版)
     """
     paths_to_add = []
     
@@ -78,59 +112,38 @@ def extract_paths_from_action(proc_act_name: str, action: Dict, result_dict: Dic
     return paths_to_add
 
 
-def build_upload_tasks(api_data: Dict[str, Any], requested_products: List[str]) -> List[Dict[str, str]]:
-
+def build_upload_tasks(api_data: Dict[str, Any], requested_products: List[str], date_version: str) -> List[Dict[str, str]]:
     tasks = []
     action_list = api_data.get("data", {}).get("action_task_list", [])
     
     for product_key in requested_products:
-        target_path = TARGET_PATH_TEMPLATES.get(product_key)
+        # 1. 动态生成目标路径
+        target_path = generate_dynamic_target_path(product_key, date_version)
         if not target_path:
-            print(f"   - ⚠️  跳过 '{product_key}': 未在 TARGET_PATH_TEMPLATES 中配置目标路径。")
+            print(f"   - ⚠️  跳过 '{product_key}': 无法为其生成有效的动态目标路径。")
             continue
 
+        # 2. 处理固定路径的 JSON 文件
         if product_key in FIXED_JSON_PATHS:
             obs_path = FIXED_JSON_PATHS[product_key]
-            print(f"\n--- 正在为产品 '{product_key}' 应用固定路径规则 ---")
-            print(f"   - ✅ 提取到固定路径: {obs_path}")
             tasks.append({"product_key": product_key, "obs_path": obs_path, "target_path": target_path})
             continue
 
+        # 3. 处理动态路径的产品
         action_names_for_this_product = PRODUCT_TO_ACTION_NAME_MAP.get(product_key, [])
         if not action_names_for_this_product:
-            print(f"\n--- 正在为产品 '{product_key}' 寻找路径 ---")
             print(f"   - ⚠️  跳过 '{product_key}': 未在 PRODUCT_TO_ACTION_NAME_MAP 中配置。")
             continue
-            
-        print(f"\n--- 正在为产品 '{product_key}' 寻找路径 ---")
-        print(f"   - 它关心以下 Actions: {action_names_for_this_product}")
         
         found_paths_for_this_product = []
         for action in action_list:
-            proc_act_name = action.get("proc_act_name")
-            if proc_act_name not in action_names_for_this_product:
-                continue
+            if action.get("proc_act_name") in action_names_for_this_product:
+                paths = extract_paths_from_action(action["proc_act_name"], action, action.get("result", {}), product_key)
+                found_paths_for_this_product.extend(paths)
 
-            result_dict = action.get("result", {})
-            paths_from_action = extract_paths_from_action(proc_act_name, action, result_dict, product_key)
+        for obs_path in found_paths_for_this_product:
+            tasks.append({"product_key": product_key, "obs_path": obs_path, "target_path": target_path})
             
-            if paths_from_action:
-                found_paths_for_this_product.extend(paths_from_action)
-            else:
-                print(f"     - ⚠️  在 '{proc_act_name}' 中未根据规则提取到任何路径。")
-
-        if found_paths_for_this_product:
-            print(f"   - ✨ 总结: 为 '{product_key}' 共找到 {len(found_paths_for_this_product)} 个路径，正在创建任务...")
-            for obs_path in found_paths_for_this_product:
-                print(f"     - 添加任务: {obs_path}")
-                tasks.append({
-                    "product_key": product_key,
-                    "obs_path": obs_path,
-                    "target_path": target_path
-                })
-        else:
-            print(f"   - ❌ 总结: 未能为 '{product_key}' 找到任何有效的 OBS 路径。请检查 API 响应或配置。")
-                 
     return tasks
 
 
@@ -167,7 +180,9 @@ def start_upload_process(request: UploadRequest):
             return [{"product": p, "status": "error", "message": f"调用 EP API 失败: {str(e)}"} for p in request.products]
 
     print(f"\n➡️  步骤 2: 正在构建上传任务...")
-    upload_tasks = build_upload_tasks(api_data, request.products)
+    
+    upload_tasks = build_upload_tasks(api_data, request.products, request.date_version)
+
     print(upload_tasks)
     print(f"\n➡️  步骤 3: 开始执行上传...")
     # final_results 是一个包含每个文件上传结果的详细列表

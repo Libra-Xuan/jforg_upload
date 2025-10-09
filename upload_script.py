@@ -17,16 +17,11 @@ HEADERS = {
 
 
 # 定义每个产品最终的上传目标文件夹路径
-TARGET_PATH_TEMPLATES: Dict[str, str] = {
-    "ST35_DEV": "panguprodmmt/Momenta/174/NCD2442/dev/20250925_A082.03/",
-    "ST35_PROD": "panguprodmmt/Momenta/174/NCD2442/prod/20250925_A082.03/",
-    "ST3_DEV": "panguprodmmt/Momenta/167/NCD2442/dev/20250925_A182.03/",
-    "ST3_PROD": "panguprodmmt/Momenta/167/NCD2442/prod/20250925_A182.03/",
-    "ST3_DEV_json": "panguprodmmt/Momenta/167/NCD2442/dev/20250925_A182.03/",
-    "ST3_PROD_json": "panguprodmmt/Momenta/167/NCD2442/prod/20250925_A182.03/",
-    "ST35_DEV_json": "panguprodmmt/Momenta/174/NCD2442/dev/20250925_A082.03/",
-    "ST35_PROD_json": "panguprodmmt/Momenta/174/NCD2442/prod/20250925_A082.03/",
+PRODUCT_FAMILY_BASE_PATHS: Dict[str, str] = {
+    "ST3": "panguprodmmt/Momenta/167/NCD2442/",
+    "ST35": "panguprodmmt/Momenta/174/NCD2442/",
 }
+
 
 # 定义每个【动态产品】需要从哪些 API Action 中提取信息
 PRODUCT_TO_ACTION_NAME_MAP: Dict[str, List[str]] = {

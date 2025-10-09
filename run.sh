@@ -1,4 +1,5 @@
 #!/bin/bash
+#python -m uvicorn main:app --reload
 
 # 定义镜像和容器名称
 IMAGE_NAME="jfrog-automation-server"
