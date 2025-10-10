@@ -60,6 +60,8 @@ def generate_dynamic_target_path(product_key: str, date_version: str) -> Optiona
         family = "ST35"
     elif product_key.startswith("ST3"):
         family = "ST3"
+    elif product_key.startswith("OTA"):
+        family = "OTA"
     
     if not family:
         print(f"   - ❌ 无法为 '{product_key}' 确定产品家族 (ST3/ST35)。")
@@ -71,7 +73,11 @@ def generate_dynamic_target_path(product_key: str, date_version: str) -> Optiona
         return None
 
     env_part = None
-    if "DEV" in product_key:
+    if "OTA_SOP" in product_key:
+        env_part = "sop/"
+    elif "OTA_PROD" in product_key:
+        env_part = "sop_prod/"
+    elif "DEV" in product_key:
         env_part = "dev/"
     elif "PROD" in product_key:
         env_part = "prod/"
@@ -308,3 +314,4 @@ def start_upload_process(request: UploadRequest):
 
     print("\n✅ --- 所有任务处理完成。---")
     return aggregated_results_list
+

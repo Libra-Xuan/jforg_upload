@@ -18,8 +18,9 @@ HEADERS = {
 
 # 定义每个产品最终的上传目标文件夹路径
 PRODUCT_FAMILY_BASE_PATHS: Dict[str, str] = {
-    "ST3": "panguprodmmt/Momenta/167/NCD2442/test/",
-    "ST35": "panguprodmmt/Momenta/174/NCD2442/test/",
+    "ST3": "panguprodmmt/Momenta/167/NCD2442/",
+    "ST35": "panguprodmmt/Momenta/174/NCD2442/",
+    "OTA": "panguprodmmt/Momenta/174/l2pp/"
 }
 
 
@@ -29,6 +30,8 @@ PRODUCT_TO_ACTION_NAME_MAP: Dict[str, List[str]] = {
     "ST35_PROD": ["ST35 PROD SOP", "ST35 IFS", "st35 sop prod"],
     "ST3_DEV": ["ST3 DEV SOP", "ST3 IFS", "st3 sop dev"],
     "ST3_PROD": ["ST3  PROD SOP", "ST3 IFS", "st3 sop prod"],
+    "OTA_SOP": ["ST35 DEV SOP", "ST35 IFS", "st35 sop dev"],
+    "OTA_PROD": ["ST35 PROD SOP", "ST35 IFS", "st35 sop prod"],
 }
 
 FIXED_JSON_PATHS = {
@@ -36,6 +39,8 @@ FIXED_JSON_PATHS = {
     "ST3_PROD_json": "obs://harz-data-obs/vertical_version/vertical_package_config/ST3_prod/test.json",
     "ST35_DEV_json": "obs://harz-data-obs/vertical_version/vertical_package_config/ST35_dev/test.json",
     "ST35_PROD_json": "obs://harz-data-obs/vertical_version/vertical_package_config/ST35_prod/test.json",
+    "OTA_SOP_json": "obs://harz-data-obs/vertical_version/vertical_package_config/ST35_dev/test.json",
+    "OTA_PROD_json": "obs://harz-data-obs/vertical_version/vertical_package_config/ST35_prod/test.json",
 }
 
 # ==========================================================
