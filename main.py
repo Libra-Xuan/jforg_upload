@@ -173,7 +173,70 @@ def build_upload_tasks(api_data: Dict[str, Any], requested_products: List[str], 
             
     return tasks
 
+def get_token(username, password):
+    """
+    根据提供的用户名和密码，向Keycloak服务器请求获取access token。
+    
+    Args:
+        username (str): 向IT申请的公共账号
+        password (str): 公共账号的密码
 
+    Returns:
+        str: 获取到的 access token，如果失败则返回 None。
+    """
+    # 1. 定义 API 的 URL
+    api_url = "https://keycloak-prod-cla.mmtwork.com/auth/realms/momenta-prod/protocol/openid-connect/token"
+    
+    # 2. 定义请求头
+    # 当使用 requests 库的 data 参数时，它会自动设置 Content-Type 为 application/x-www-form-urlencoded，
+    # 但为了清晰，我们也可以显式定义。
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    # 3. 构造请求体 (payload)
+    # 注意：这里我们使用一个字典。requests库会将其自动编码为 x-www-form-urlencoded 格式。
+    payload = {
+        'client_id': 'toolchain-client',
+        'grant_type': 'password',
+        'username': username,
+        'password': password
+    }
+
+    try:
+        # 4. 发送 POST 请求
+        # 使用 `data` 参数而不是 `json` 参数，这是因为 Content-Type 是 x-www-form-urlencoded
+        print("正在发送请求到:", api_url)
+        response = requests.post(api_url, headers=headers, data=payload, timeout=10) # 设置10秒超时
+        
+        # 5. 检查响应状态码
+        # raise_for_status() 会在遇到 4xx 或 5xx 的错误状态码时抛出异常
+        response.raise_for_status()
+        
+        # 6. 解析返回的 JSON 数据
+        response_data = response.json()
+        
+        # 7. 提取 access_token
+        access_token = response_data.get('access_token')
+        
+        if access_token:
+            print("✅ 成功获取 Token！")
+            return access_token
+        else:
+            print("❌ 获取 Token 失败：响应中未找到 'access_token'。")
+            print("完整响应内容:", response_data)
+            return None
+            
+    except requests.exceptions.HTTPError as http_err:
+        # 处理 HTTP 错误 (例如 401 Unauthorized, 400 Bad Request)
+        print(f"❌ HTTP 错误: {http_err}")
+        print(f"响应状态码: {http_err.response.status_code}")
+        print(f"响应内容: {http_err.response.text}")
+    except requests.exceptions.RequestException as req_err:
+        # 处理其他网络请求相关的错误 (例如连接超时、DNS错误)
+        print(f"❌ 请求异常: {req_err}")
+    
+    return None
 # --- API 端点 ---
 @app.post("/api/start-upload")
 def start_upload_process(request: UploadRequest):
@@ -182,7 +245,8 @@ def start_upload_process(request: UploadRequest):
 
     current_token_from_env = os.getenv("EP_API_TOKEN")
     token_for_this_request = current_token_from_env # 默认使用环境变量中的 token
-    
+
+
     # 检查前端是否传入了有效的、非空的新 token
     new_token_provided = request.custom_token and request.custom_token.strip()
     if new_token_provided:
@@ -197,7 +261,18 @@ def start_upload_process(request: UploadRequest):
             print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
         # print("   - 使用的 Token 来源: 前端自定义输入")
     else:
-        print("   - 使用的 Token 来源: 环境变量 (.env)")
+                
+        your_username = "xuan1.li"  # <--- 在这里填入你的账号
+        your_password = "Lx20010923"    # <--- 在这里填入你的密码
+        new_token_provided=get_token(your_username, your_password)
+        token_for_this_request = new_token_provided
+        # 2. 检查新 token 是否与已存的 token 不同
+        if token_for_this_request != current_token_from_env:
+            # 3. 如果不同，则更新 .env 文件以备将来使用
+            update_env_token(token_for_this_request)
+        else:
+            print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
+
 
     # 检查最终是否有可用的 Token
     if not token_for_this_request:
