@@ -1,4 +1,3 @@
-
 import os
 import re
 import requests
@@ -25,33 +24,32 @@ EP_HOST = "https://ep.momenta.works"
 class UploadRequest(BaseModel):
     pipeline_url: str
     date_version: str
-    custom_token: Optional[str] = None
     products: List[str]
 
 def extract_task_id_from_url(url: str) -> Optional[str]:
     match = re.search(r"/tasks/([a-f0-9]+)", url)
     return match.group(1) if match else None
 
-def update_env_token(new_token: str):
-    """
-    安全地查找并更新 .env 文件中的 EP_API_TOKEN。
-    """
-    try:
-        dotenv_path = dotenv.find_dotenv()
-        if not dotenv_path:
-            # 如果没有 .env 文件，则创建一个
-            with open(".env", "w") as f:
-                f.write(f"EP_API_TOKEN={new_token}\n")
-            dotenv_path = ".env"
-            print("   - ✨ 未找到 .env 文件，已自动创建。")
+# def update_env_token(new_token: str):
+#     """
+#     安全地查找并更新 .env 文件中的 EP_API_TOKEN。
+#     """
+#     try:
+#         dotenv_path = dotenv.find_dotenv()
+#         if not dotenv_path:
+#             # 如果没有 .env 文件，则创建一个
+#             with open(".env", "w") as f:
+#                 f.write(f"EP_API_TOKEN={new_token}\n")
+#             dotenv_path = ".env"
+#             print("   - ✨ 未找到 .env 文件，已自动创建。")
 
-        # 使用 set_key 安全地更新或添加 EP_API_TOKEN
-        dotenv.set_key(dotenv_path, "EP_API_TOKEN", new_token)
-        print(f"   - ✨ .env 文件中的 EP_API_TOKEN 已更新。")
-        return True
-    except Exception as e:
-        print(f"   - ❌ 更新 .env 文件失败: {e}")
-        return False
+#         # 使用 set_key 安全地更新或添加 EP_API_TOKEN
+#         dotenv.set_key(dotenv_path, "EP_API_TOKEN", new_token)
+#         print(f"   - ✨ .env 文件中的 EP_API_TOKEN 已更新。")
+#         return True
+#     except Exception as e:
+#         print(f"   - ❌ 更新 .env 文件失败: {e}")
+#         return False
 
 def generate_dynamic_target_path(product_key: str, date_version: str) -> Optional[str]:
     """根据产品名和日期版本，动态生成上传的目标路径"""
@@ -243,35 +241,35 @@ def start_upload_process(request: UploadRequest):
     print("\n" + "="*50)
     print("✅ --- 收到 POST 请求 ---") 
 
-    current_token_from_env = os.getenv("EP_API_TOKEN")
-    token_for_this_request = current_token_from_env # 默认使用环境变量中的 token
+    # current_token_from_env = os.getenv("EP_API_TOKEN")
+    # token_for_this_request = current_token_from_env # 默认使用环境变量中的 token
 
 
     # 检查前端是否传入了有效的、非空的新 token
-    new_token_provided = request.custom_token and request.custom_token.strip()
-    if new_token_provided:
-        print("   - 发现前端输入了新的 Token。")
-        # 1. 本次请求将使用这个新 token
-        token_for_this_request = request.custom_token
-        # 2. 检查新 token 是否与已存的 token 不同
-        if token_for_this_request != current_token_from_env:
-            # 3. 如果不同，则更新 .env 文件以备将来使用
-            update_env_token(token_for_this_request)
-        else:
-            print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
-        # print("   - 使用的 Token 来源: 前端自定义输入")
-    else:
+    # new_token_provided = request.custom_token and request.custom_token.strip()
+    # if new_token_provided:
+    #     print("   - 发现前端输入了新的 Token。")
+    #     # 1. 本次请求将使用这个新 token
+    #     token_for_this_request = request.custom_token
+    #     # 2. 检查新 token 是否与已存的 token 不同
+    #     if token_for_this_request != current_token_from_env:
+    #         # 3. 如果不同，则更新 .env 文件以备将来使用
+    #         update_env_token(token_for_this_request)
+    #     else:
+    #         print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
+    #     # print("   - 使用的 Token 来源: 前端自定义输入")
+    # else:
                 
-        your_username = "xuan1.li"  # <--- 在这里填入你的账号
-        your_password = "Lx20010923"    # <--- 在这里填入你的密码
-        new_token_provided=get_token(your_username, your_password)
-        token_for_this_request = new_token_provided
-        # 2. 检查新 token 是否与已存的 token 不同
-        if token_for_this_request != current_token_from_env:
-            # 3. 如果不同，则更新 .env 文件以备将来使用
-            update_env_token(token_for_this_request)
-        else:
-            print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
+    your_username = "xuan1.li"  # <--- 在这里填入你的账号
+    your_password = "Lx20010923"    # <--- 在这里填入你的密码
+    new_token_provided=get_token(your_username, your_password)
+    token_for_this_request = new_token_provided
+    # # 2. 检查新 token 是否与已存的 token 不同
+    # if token_for_this_request != current_token_from_env:
+    #     # 3. 如果不同，则更新 .env 文件以备将来使用
+    #     update_env_token(token_for_this_request)
+    # else:
+    #     print("   - 新 Token 与已存 Token 相同，无需更新 .env 文件。")
 
 
     # 检查最终是否有可用的 Token
